@@ -1,0 +1,4 @@
+interface:
+  display_name: "Compaction Cat"
+  short_description: "Cat-themed Codex compaction warnings"
+  default_prompt: "Use $compaction-cat to decide whether this long Codex thread needs a durable handoff before more implementation work."
