@@ -24,6 +24,7 @@ For actual compaction, keep the `COMPACTION HAS OCCURRED` banner first, then inc
 5. In the new thread, re-read the relevant files and instructions before continuing work.
 6. Keep warnings and handoffs concrete. Avoid generic advice that leaves the next thread guessing.
 7. Treat compaction risk as practical, not tied to a single exact percentage. Warn early enough to preserve decisions before the hard compaction boundary.
+8. If the assistant says or concludes that the thread is carrying enough important state to make compaction risky, the ASCII warning banner is mandatory before any further implementation, validation, generated-output, or docs edit. Do not replace the banner with prose.
 
 ## Compaction Detected
 
@@ -106,7 +107,7 @@ Before starting that phase, show this fenced text block:
 ############################################################
 ```
 
-Then stop before implementation unless the user asks only for a small docs-only update, a short answer, or a durable handoff.
+Then stop before implementation unless the user asks only for a short answer or a durable handoff. If compaction risk has already been identified, do not skip the ASCII banner for a docs-only update; the banner is the required visual indicator.
 
 ## Durable Handoff
 
@@ -157,3 +158,4 @@ In the new thread or fresh session:
 4. Losing recent user corrections or constraints.
 5. Starting a long refactor after warning about context risk.
 6. Giving a handoff without exact files, commands, validation status, and constraints.
+7. Saying that the thread is long or risky without displaying the required ASCII warning banner.
