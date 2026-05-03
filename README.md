@@ -7,7 +7,7 @@ Public Codex utilities and skills.
 `compaction-cat` is a Codex skill that helps prevent unsafe implementation work after context compaction or near the end of a long, context-heavy thread. It uses cat-themed ASCII warning banners to make compaction warnings hard to miss.
 
 The following screenshot shows a warning after compaction occurred, in this case at about 90% context window used.
-<alt="compacted_85_to_11perc" src="https://github.com/user-attachments/assets/7cd12deb-873f-4224-866d-4fbfd4feb2e7" />
+<img width="1107" height="1523" alt="compacted_85_to_11perc" src="https://github.com/user-attachments/assets/7cd12deb-873f-4224-866d-4fbfd4feb2e7" />
 
 Use it when:
 
