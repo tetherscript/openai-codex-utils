@@ -23,7 +23,7 @@ For actual compaction, keep the `COMPACTION HAS OCCURRED` banner first, then inc
 4. Do not trust compressed memory for current code state, user corrections, or partially completed edits.
 5. In the new thread, re-read the relevant files and instructions before continuing work.
 6. Keep warnings and handoffs concrete. Avoid generic advice that leaves the next thread guessing.
-7. Treat compaction risk as practical, not tied to a single exact percentage. Warn early enough to preserve decisions before the hard compaction boundary.
+7. Treat compaction risk as practical, but use the visible 75 to 85 percent context range as the normal warning band when a context percentage or token meter is available. Do not show the risk banner below 75 percent unless no meter is visible and practical risk signals are strong. At or above 85 percent, warn before non-trivial implementation, validation, generated-output, media, or docs work.
 8. If the assistant says or concludes that the thread is carrying enough important state to make compaction risky, the ASCII warning banner is mandatory before any further implementation, validation, generated-output, or docs edit. Do not replace the banner with prose.
 9. If a compaction or compaction-risk warning banner is shown in an interim update, repeat the same fenced ASCII banner in the final answer so it remains visible after progress details collapse.
 
@@ -90,9 +90,10 @@ If no exact context percentage is visible, use practical risk signals:
 
 If a context percentage or token meter is visible:
 
-1. Use 75 percent as the conservative warning point because it leaves room to capture durable state before hard compaction.
-2. At or above 80 percent, warn before any non-trivial implementation, validation, generated-output, media, or docs phase.
-3. Do not wait for a known failure point such as a prior observed percentage unless the runtime provides a documented hard limit.
+1. Use the 75 to 85 percent range as the warning band because it leaves room to capture durable state before hard compaction.
+2. Do not show the risk banner below 75 percent unless no meter is visible and practical risk signals are strong.
+3. At or above 85 percent, warn before any non-trivial implementation, validation, generated-output, media, or docs phase and recommend a new thread before continuing.
+4. Do not wait for a known failure point such as a prior observed percentage unless the runtime provides a documented hard limit.
 
 Before starting that phase, show this fenced text block:
 
@@ -110,9 +111,33 @@ Before starting that phase, show this fenced text block:
 ############################################################
 ```
 
+Then include a suggested continuation prompt in a fenced `text` code block. Use this shape and fill in the current workspace, files, and task:
+
+```text
+Start a new Codex thread or fresh session in <absolute workspace path>.
+
+Read first:
+1. <project instructions>
+2. <durable handoff, active plan, or relevant domain docs>
+
+Task:
+<one sentence describing the next implementation step>
+
+Current state:
+1. Files changed: <paths or none>
+2. Commands run: <commands and results>
+3. Validation status: <passed, failed, not run, or blocked>
+4. Decisions made: <concrete decisions>
+5. Known risks: <specific risks>
+
+Constraints:
+1. Do not trust summarized conversation memory.
+2. Re-read current files before editing.
+```
+
 Then stop before implementation unless the user asks only for a short answer or a durable handoff. If compaction risk has already been identified, do not skip the ASCII banner for a docs-only update; the banner is the required visual indicator.
 
-If this warning is shown during a turn, repeat the same fenced ASCII banner in the final answer.
+If this warning is shown during a turn, repeat the same fenced ASCII banner and the suggested continuation prompt in the final answer and in any prompt summary or handoff.
 
 ## Durable Handoff
 
