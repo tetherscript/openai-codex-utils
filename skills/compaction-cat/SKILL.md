@@ -25,6 +25,7 @@ For actual compaction, keep the `COMPACTION HAS OCCURRED` banner first, then inc
 6. Keep warnings and handoffs concrete. Avoid generic advice that leaves the next thread guessing.
 7. Treat compaction risk as practical, not tied to a single exact percentage. Warn early enough to preserve decisions before the hard compaction boundary.
 8. If the assistant says or concludes that the thread is carrying enough important state to make compaction risky, the ASCII warning banner is mandatory before any further implementation, validation, generated-output, or docs edit. Do not replace the banner with prose.
+9. If a compaction or compaction-risk warning banner is shown in an interim update, repeat the same fenced ASCII banner in the final answer so it remains visible after progress details collapse.
 
 ## Compaction Detected
 
@@ -57,6 +58,8 @@ This thread has compacted. Please open a new thread or fresh session before we c
 ```
 
 Do not continue implementation in the compacted thread or session. Only answer short clarifying questions or help the user prepare a concise startup prompt for a new thread or fresh session.
+
+If this warning is shown during a turn, repeat the same fenced ASCII banner in the final answer.
 
 ## Compaction Risk
 
@@ -109,6 +112,8 @@ Before starting that phase, show this fenced text block:
 
 Then stop before implementation unless the user asks only for a short answer or a durable handoff. If compaction risk has already been identified, do not skip the ASCII banner for a docs-only update; the banner is the required visual indicator.
 
+If this warning is shown during a turn, repeat the same fenced ASCII banner in the final answer.
+
 ## Durable Handoff
 
 When recommending a new thread or fresh session, provide a ready-to-use startup prompt. Include only facts that are durable or recently verified from files, commands, or explicit user messages.
@@ -159,3 +164,4 @@ In the new thread or fresh session:
 5. Starting a long refactor after warning about context risk.
 6. Giving a handoff without exact files, commands, validation status, and constraints.
 7. Saying that the thread is long or risky without displaying the required ASCII warning banner.
+8. Showing a compaction or compaction-risk warning only in an interim update and omitting it from the final answer.
