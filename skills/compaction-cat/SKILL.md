@@ -7,6 +7,14 @@ description: Prevent unsafe Codex work across context compaction and long-thread
 
 Use this skill to preserve task correctness when a Codex thread or session has compacted or is likely to compact during risky work. Favor durable workspace state and current files over summarized conversation memory.
 
+When this skill is available and used, confirm it visibly in the same response:
+
+```text
+Loaded skill: $compaction-cat.
+```
+
+For actual compaction, keep the `COMPACTION HAS OCCURRED` banner first, then include the loaded-skill confirmation after the banner.
+
 ## Decision Rules
 
 1. If actual compaction or summary-based continuation is detected, stop implementation work in the current thread.
@@ -15,6 +23,7 @@ Use this skill to preserve task correctness when a Codex thread or session has c
 4. Do not trust compressed memory for current code state, user corrections, or partially completed edits.
 5. In the new thread, re-read the relevant files and instructions before continuing work.
 6. Keep warnings and handoffs concrete. Avoid generic advice that leaves the next thread guessing.
+7. Treat compaction risk as practical, not tied to a single exact percentage. Warn early enough to preserve decisions before the hard compaction boundary.
 
 ## Compaction Detected
 
@@ -63,6 +72,23 @@ Risky phases include:
 4. Large test-harness, build-system, or documentation-generation changes.
 5. Long debug sessions that may require many tool calls.
 6. Work where rollback or review depends on subtle prior decisions.
+7. Long-running multi-step work that combines code changes with docs, active plans, generated output, or validation.
+8. Generated output or media workflow changes, including help output, screenshots, images, installer assets, or validation artifacts.
+9. Repeated user corrections, constraints, or decisions that are important and not yet captured durably.
+10. Another implementation, validation, generated-output, or docs phase after a major phase appears complete.
+
+If no exact context percentage is visible, use practical risk signals:
+
+1. The thread has accumulated many file reads, tool outputs, build or validation logs, debugging steps, or implementation phases.
+2. The next step would be hard to review or roll back if recent conversation turns were lost.
+3. The assistant has already said a new thread or fresh session would be prudent.
+4. Important constraints or decisions still exist only in the conversation.
+
+If a context percentage or token meter is visible:
+
+1. Use 75 percent as the conservative warning point because it leaves room to capture durable state before hard compaction.
+2. At or above 80 percent, warn before any non-trivial implementation, validation, generated-output, media, or docs phase.
+3. Do not wait for a known failure point such as a prior observed percentage unless the runtime provides a documented hard limit.
 
 Before starting that phase, show this fenced text block:
 
