@@ -74,9 +74,6 @@ If $compaction-cat is unavailable, warn the user explicitly in the same response
 Compaction Cat should sit above local workflow, build, validation, domain, and implementation instructions for any compaction or compaction-risk decision. Keep a small local fallback in `AGENTS.md` or project docs so the project remains safe when the skill is not installed. At minimum, the project instructions should say Codex must confirm when `$compaction-cat` is loaded and warn the user when `$compaction-cat` is unavailable. After actual compaction, Codex must show the `COMPACTION HAS OCCURRED` banner, stop implementation work, and ask the user to open a new thread or fresh session.
 
 ## What It Does
-
-When actual compaction is detected, the skill tells Codex to pause implementation work, recommend a new thread or fresh session, and resume from durable project state unless the user explicitly decides otherwise.
-
 When compaction risk is high, the skill tells Codex to warn before starting risky work and provide a concrete handoff that includes files to read, current state, commands run, validation status, constraints, and next steps. The warning is based on practical risk signals, not one exact percentage. If a context percentage or token meter is visible, 75 percent is the conservative warning point because it leaves room to capture durable state before hard compaction; at or above 80 percent, warn before any non-trivial implementation, validation, generated-output, media, or docs phase.
 
 ## COMPACTION RISK WARNING Example
@@ -94,6 +91,8 @@ When compaction risk is high, the skill tells Codex to warn before starting risk
 #                                                          #
 ############################################################
 ```
+
+When actual compaction is detected, the skill tells Codex to pause implementation work, recommend a new thread or fresh session, and resume from durable project state unless the user explicitly decides otherwise.
 
 ## COMPACTION HAS OCCURRED Example
 
