@@ -22,6 +22,8 @@ Compaction-risk estimates should use only work the user has actually requested i
 
 When available, Compaction Cat should calculate the current thread context-window percentage from the local Codex session log before relying on practical risk signals. This is local file inspection only and does not require a query to the OpenAI or Codex model server. Use `CODEX_THREAD_ID`, find the matching JSONL session log under `%USERPROFILE%\.codex\sessions` or through `session_index.jsonl`, read the latest `event_msg` entry where `payload.type == "token_count"`, and calculate `(payload.info.last_token_usage.total_tokens / payload.info.model_context_window) * 100`. A value of 75 percent or higher satisfies the risk threshold, subject to actual-compaction priority and the once-per-session warning limit. Do not use `rate_limits.primary.used_percent` or cumulative `total_token_usage.total_tokens` as context-window occupancy.
 
+Routine context-window checks are silent. Codex should not announce that it is looking up the thread id, matching session log, token-count event, or below-threshold result unless the user asks for that detail or a warning must be shown.
+
 The skill is located at:
 
 ```text
