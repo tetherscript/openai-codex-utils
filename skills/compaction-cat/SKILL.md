@@ -23,11 +23,12 @@ For actual compaction, keep the `COMPACTION HAS OCCURRED` banner first, then inc
 4. Do not trust compressed memory for current code state, user corrections, or partially completed edits.
 5. In the new thread, re-read the relevant files and instructions before continuing work.
 6. Keep warnings and handoffs concrete. Avoid generic advice that leaves the next thread guessing.
-7. Treat compaction risk as practical, but use the visible 75 to 85 percent context range as the normal warning band when a context percentage or token meter is available. Do not show the risk banner below 75 percent unless no meter is visible and practical risk signals are strong. At or above 85 percent, warn before non-trivial implementation, validation, generated-output, media, or docs work.
-8. Calculate potential token usage from work the user has actually requested in existing prompts. Do not count speculative future work, including work the user says they may request later in the same thread or after closing the thread, as a current-thread compaction risk signal.
-9. If the user says they plan to start a large task in a future prompt or a new thread, provide a normal concise handoff or startup prompt if useful. Do not show the compaction-risk banner for that future task unless the current response itself is large, stateful, or near the 75 to 85 percent warning range.
-10. If the assistant says or concludes that the thread is carrying enough important state to make compaction risky, the ASCII warning banner is mandatory before any further implementation, validation, generated-output, or docs edit. Do not replace the banner with prose.
-11. If a compaction or compaction-risk warning banner is shown in an interim update, repeat the same fenced ASCII banner in the final answer so it remains visible after progress details collapse.
+7. When the local Codex session log is available, calculate the current thread context-window usage locally from the latest `token_count` event before relying on visible UI meters or practical risk signals. Do not query the OpenAI or Codex model server for this calculation.
+8. Treat compaction risk as practical, but use the 75 to 85 percent context range as the normal warning band when a context percentage or token meter is available. Do not show the risk banner below 75 percent unless no meter is visible and practical risk signals are strong. At or above 85 percent, warn before non-trivial implementation, validation, generated-output, media, or docs work.
+9. Calculate potential token usage from work the user has actually requested in existing prompts. Do not count speculative future work, including work the user says they may request later in the same thread or after closing the thread, as a current-thread compaction risk signal.
+10. If the user says they plan to start a large task in a future prompt or a new thread, provide a normal concise handoff or startup prompt if useful. Do not show the compaction-risk banner for that future task unless the current response itself is large, stateful, or near the 75 to 85 percent warning range.
+11. If the assistant says or concludes that the thread is carrying enough important state to make compaction risky, the ASCII warning banner is mandatory before any further implementation, validation, generated-output, or docs edit. Do not replace the banner with prose.
+12. If a compaction or compaction-risk warning banner is shown in an interim update, repeat the same fenced ASCII banner in the final answer so it remains visible after progress details collapse.
 
 ## Compaction Detected
 
@@ -63,6 +64,34 @@ Do not continue implementation in the compacted thread or session. Only answer s
 
 If this warning is shown during a turn, repeat the same fenced ASCII banner in the final answer.
 
+## Context Percentage From Local Session Log
+
+When available, use the local Codex session log as the preferred source for current thread context-window usage. This calculation is local file inspection only; it does not require or justify a query to the OpenAI or Codex model server.
+
+1. Get the current thread id from the `CODEX_THREAD_ID` environment variable.
+2. Find the matching local session log under `%USERPROFILE%\.codex\sessions`.
+3. Prefer a JSONL filename that contains the thread id. If needed, use `session_index.jsonl` to map ids to thread names or log paths, then choose the newest matching JSONL session log.
+4. Read the latest JSONL entry where `type == "event_msg"` and `payload.type == "token_count"`.
+5. Calculate `context_window_used_percent` as:
+
+```text
+(payload.info.last_token_usage.total_tokens / payload.info.model_context_window) * 100
+```
+
+6. Use this computed percentage as the current thread context-window usage.
+7. Show the `COMPACTION RISK WARNING` banner when this computed percentage is 75 percent or higher.
+8. Do not confuse this percentage with `rate_limits.primary.used_percent` or cumulative `total_token_usage.total_tokens`; those are not context-window occupancy.
+
+Example:
+
+```text
+last_token_usage.total_tokens = 55462
+model_context_window = 258400
+context_window_used_percent = 21.46 percent
+```
+
+This example is below 75 percent, so the context percentage alone does not require a compaction-risk warning.
+
 ## Compaction Risk
 
 Show a risk warning before starting a new phase when both are true. Base the decision on work the user has actually requested in existing prompts, not speculative future prompts or tasks the user says will happen in a later thread:
@@ -83,14 +112,14 @@ Risky phases include:
 9. Repeated user corrections, constraints, or decisions that are important and not yet captured durably.
 10. Another implementation, validation, generated-output, or docs phase after a major phase appears complete.
 
-If no exact context percentage is visible, use practical risk signals:
+If no exact context percentage is available from the local session log, the UI, or the user, use practical risk signals:
 
 1. The thread has accumulated many file reads, tool outputs, build or validation logs, debugging steps, or implementation phases.
 2. The next step would be hard to review or roll back if recent conversation turns were lost.
 3. The assistant has already said a new thread or fresh session would be prudent.
 4. Important constraints or decisions still exist only in the conversation.
 
-If a context percentage or token meter is visible:
+If a computed context percentage, visible context percentage, or token meter is available:
 
 1. Use the 75 to 85 percent range as the warning band because it leaves room to capture durable state before hard compaction.
 2. Do not show the risk banner below 75 percent unless no meter is visible and practical risk signals are strong.
