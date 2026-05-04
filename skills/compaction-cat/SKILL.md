@@ -5,7 +5,7 @@ description: Prevent unsafe Codex work across context compaction and long-thread
 
 # Compaction Cat
 
-Use this skill to preserve task correctness when a Codex thread or session has compacted or is likely to compact during risky work. Favor durable workspace state and current files over summarized conversation memory.
+Use this skill to warn clearly when a Codex thread or session has compacted or is likely to compact. Favor durable workspace state and current files over summarized conversation memory. The skill warns; the user decides whether implementation continues in the same session.
 
 When this skill is available and used, confirm it visibly in the same response:
 
@@ -17,18 +17,40 @@ For actual compaction, keep the `COMPACTION HAS OCCURRED` banner first, then inc
 
 ## Decision Rules
 
-1. If actual compaction or summary-based continuation is detected, stop implementation work in the current thread.
-2. If the next phase is risky and the current thread or session is already long or context-heavy, warn before starting and recommend a new thread or fresh session.
-3. Before recommending a new thread, capture durable state when the current thread still has enough context to do so accurately.
-4. Do not trust compressed memory for current code state, user corrections, or partially completed edits.
-5. In the new thread, re-read the relevant files and instructions before continuing work.
-6. Keep warnings and handoffs concrete. Avoid generic advice that leaves the next thread guessing.
-7. When the local Codex session log is available, calculate the current thread context-window usage locally from the latest `token_count` event before relying on visible UI meters or practical risk signals. Do not query the OpenAI or Codex model server for this calculation.
-8. Treat compaction risk as practical, but use the 75 to 85 percent context range as the normal warning band when a context percentage or token meter is available. Do not show the risk banner below 75 percent unless no meter is visible and practical risk signals are strong. At or above 85 percent, warn before non-trivial implementation, validation, generated-output, media, or docs work.
-9. Calculate potential token usage from work the user has actually requested in existing prompts. Do not count speculative future work, including work the user says they may request later in the same thread or after closing the thread, as a current-thread compaction risk signal.
-10. If the user says they plan to start a large task in a future prompt or a new thread, provide a normal concise handoff or startup prompt if useful. Do not show the compaction-risk banner for that future task unless the current response itself is large, stateful, or near the 75 to 85 percent warning range.
-11. If the assistant says or concludes that the thread is carrying enough important state to make compaction risky, the ASCII warning banner is mandatory before any further implementation, validation, generated-output, or docs edit. Do not replace the banner with prose.
-12. If a compaction or compaction-risk warning banner is shown in an interim update, repeat the same fenced ASCII banner in the final answer so it remains visible after progress details collapse.
+1. Actual compaction has priority over compaction risk. If actual compaction or summary-based continuation is detected, handle only `COMPACTION HAS OCCURRED` for that turn.
+2. Show `COMPACTION HAS OCCURRED` once for the current session, and only when actual compaction or summary-based continuation is detected.
+3. If actual compaction is not detected, calculate the current session context-window usage before evaluating compaction risk.
+4. Show `COMPACTION RISK WARNING` once for the current session, and only when current session context-window usage is known to be at least the minimum warning percentage, currently 75 percent.
+5. After either warning, the user decides whether implementation continues in the same session, moves to a new thread, or pauses.
+6. Before recommending a new thread for compaction risk, capture durable state when the current thread still has enough context to do so accurately.
+7. Do not trust compressed memory for current code state, user corrections, or partially completed edits.
+8. In the new thread, re-read the relevant files and instructions before continuing work.
+9. Keep warnings and handoffs concrete. Avoid generic advice that leaves the next thread guessing.
+10. When the local Codex session log is available, calculate the current thread context-window usage locally from the latest `token_count` event before relying on visible UI meters or practical risk signals. Do not query the OpenAI or Codex model server for this calculation.
+11. Do not show the risk banner below 75 percent. Practical risk signals may justify concise advice, but they do not override the minimum percentage threshold.
+12. Calculate potential token usage from work the user has actually requested in existing prompts. Do not count speculative future work, including work the user says they may request later in the same thread or after closing the thread, as a current-thread compaction risk signal.
+13. If the user says they plan to start a large task in a future prompt or a new thread, provide a normal concise handoff or startup prompt if useful. Do not show the compaction-risk banner for that future task unless the current session context-window usage is at or above the minimum warning percentage.
+14. If a `COMPACTION RISK WARNING` banner is shown in an interim update, repeat the same fenced ASCII banner and suggested continuation prompt in the final answer and in any prompt response summary for that turn.
+15. If a `COMPACTION HAS OCCURRED` banner is shown in an interim update, repeat the same fenced ASCII banner in the final answer and in any prompt response summary for that turn, but do not include a continuation prompt.
+
+## Per-Session Warning Limits
+
+Each warning type is shown at most once per Codex session:
+
+1. Show `COMPACTION RISK WARNING` only the first time the current session context-window usage is known to be 75 percent or higher.
+2. After `COMPACTION RISK WARNING` has been shown once, do not show that banner again in the same session. Continue with concise prose if more compaction-risk discussion is needed.
+3. Show `COMPACTION HAS OCCURRED` only the first time actual compaction or summary-based continuation is detected in the current session.
+4. After `COMPACTION HAS OCCURRED` has been shown once, do not show that banner again in the same session. Continue with concise prose if more compaction discussion is needed.
+5. These limits apply separately. A session may show no banners, only the risk banner, only the occurred banner, or both banners once each.
+6. Repeating a banner in the final answer or prompt response summary for the same turn is part of the same warning event. It does not count as showing the warning again.
+
+## Prompt Response Summaries
+
+If a warning is shown during a turn, preserve it in the response summary for that same prompt:
+
+1. For `COMPACTION RISK WARNING`, include the same fenced ASCII banner and the suggested continuation prompt.
+2. For `COMPACTION HAS OCCURRED`, include only the same fenced ASCII banner.
+3. Never include a suggested continuation prompt with `COMPACTION HAS OCCURRED`; actual compaction means summarized context may have corrupted context truth.
 
 ## Compaction Detected
 
@@ -38,7 +60,7 @@ Treat any of these as actual compaction:
 2. The assistant sees only a summary of prior work instead of the full prior thread.
 3. The assistant cannot inspect the latest detailed conversation turns that led to the current state.
 
-When actual compaction is detected, begin the next assistant message with this fenced text block:
+When actual compaction is detected and the `COMPACTION HAS OCCURRED` banner has not already been shown in the current session, begin the next assistant message with this fenced text block:
 
 ```text
 ############################################################
@@ -57,30 +79,35 @@ When actual compaction is detected, begin the next assistant message with this f
 Then say:
 
 ```text
-This thread has compacted. Please open a new thread or fresh session before we continue implementation work. I will rely on durable docs, active plans, and the current workspace files from there.
+This thread has compacted. Context truth may be corrupted because I am continuing from a summary instead of the full thread. I recommend opening a new thread or fresh session before more implementation work, but you decide whether to continue here.
 ```
 
-Do not continue implementation in the compacted thread or session. Only answer short clarifying questions or help the user prepare a concise startup prompt for a new thread or fresh session.
+Do not generate a continuation prompt after actual compaction. Because context truth may be corrupted, an accurate continuation prompt cannot be guaranteed. If the user chooses to continue implementation in the compacted session, rely on durable docs and current workspace files rather than summarized conversation memory.
 
-If this warning is shown during a turn, repeat the same fenced ASCII banner in the final answer.
+If this warning is shown during a turn, repeat the same fenced ASCII banner in the final answer and in any prompt response summary. Do not include a continuation prompt with the occurred banner.
 
-## Context Percentage From Local Session Log
+## Context Percentage From Current Local Session Log
 
-When available, use the local Codex session log as the preferred source for current thread context-window usage. This calculation is local file inspection only; it does not require or justify a query to the OpenAI or Codex model server.
+When available, get the current session context-window percentage from the local Codex session JSONL for the current thread. This calculation is local file inspection only; it does not require or justify a query to the OpenAI or Codex model server.
+
+The source of truth is the latest `token_count` event in the current thread's matching session log under `%USERPROFILE%\.codex\sessions`. The current thread is identified by `CODEX_THREAD_ID`, and the matching log is usually the JSONL filename containing that id. If the filename is not enough, use `session_index.jsonl` only to locate the current thread's session log.
 
 1. Get the current thread id from the `CODEX_THREAD_ID` environment variable.
-2. Find the matching local session log under `%USERPROFILE%\.codex\sessions`.
-3. Prefer a JSONL filename that contains the thread id. If needed, use `session_index.jsonl` to map ids to thread names or log paths, then choose the newest matching JSONL session log.
-4. Read the latest JSONL entry where `type == "event_msg"` and `payload.type == "token_count"`.
-5. Calculate `context_window_used_percent` as:
+2. Find the current thread's matching local session log under `%USERPROFILE%\.codex\sessions`.
+3. Prefer a JSONL filename that contains the thread id. If needed, use `session_index.jsonl` to map ids to thread names or log paths, then choose the newest matching JSONL session log for the current thread.
+4. Read the latest JSONL entry in that session log where `type == "event_msg"` and `payload.type == "token_count"`.
+5. Read the current context token count from `payload.info.last_token_usage.total_tokens`.
+6. Read the model context-window size from `payload.info.model_context_window`.
+7. Calculate `context_window_used_percent` as:
 
 ```text
 (payload.info.last_token_usage.total_tokens / payload.info.model_context_window) * 100
 ```
 
-6. Use this computed percentage as the current thread context-window usage.
-7. Show the `COMPACTION RISK WARNING` banner when this computed percentage is 75 percent or higher.
-8. Do not confuse this percentage with `rate_limits.primary.used_percent` or cumulative `total_token_usage.total_tokens`; those are not context-window occupancy.
+8. Use this computed percentage as the current thread context-window usage.
+9. Apply the `Compaction Risk` rules to this computed percentage. A value of 75 percent or higher satisfies the percentage threshold, but the risk banner is still subject to actual-compaction priority and the once-per-session limit.
+10. Do not use `rate_limits.primary.used_percent`, cumulative `total_token_usage.total_tokens`, or an estimated future prompt size for this value; those are not current context-window occupancy.
+11. If `CODEX_THREAD_ID`, the matching session log, or a `token_count` event is unavailable, no local computed percentage is available. Fall back to a visible UI meter or a user-provided meter for the risk threshold. Practical risk signals alone may justify concise advice, but they do not trigger the risk banner.
 
 Example:
 
@@ -94,12 +121,17 @@ This example is below 75 percent, so the context percentage alone does not requi
 
 ## Compaction Risk
 
-Show a risk warning before starting a new phase when both are true. Base the decision on work the user has actually requested in existing prompts, not speculative future prompts or tasks the user says will happen in a later thread:
+Evaluate compaction risk only when actual compaction is not detected in the current turn. Show a risk warning only when the current session context-window usage is known to be at or above the minimum warning percentage, currently 75 percent, and the `COMPACTION RISK WARNING` banner has not already been shown in the current session. Base any suggested continuation prompt on work the user has actually requested in existing prompts, not speculative future prompts or tasks the user says will happen in a later thread.
 
-1. The thread or session is already long, context-heavy, or the assistant has already said a new thread or fresh session would be prudent.
-2. The next step is broad, stateful, or hard to review if compaction occurs mid-work.
+The percentage source can be:
 
-Risky phases include:
+1. The local session-log calculation from `payload.info.last_token_usage.total_tokens` and `payload.info.model_context_window`.
+2. A visible Codex UI context meter.
+3. A user-provided context-window percentage.
+
+When the risk banner is shown, explain that opening a new thread is recommended, but the user decides whether implementation continues in the current session.
+
+At or above 75 percent, stateful phases are riskier. Examples include:
 
 1. Multi-file refactors.
 2. Generated-output rewrites.
@@ -112,7 +144,7 @@ Risky phases include:
 9. Repeated user corrections, constraints, or decisions that are important and not yet captured durably.
 10. Another implementation, validation, generated-output, or docs phase after a major phase appears complete.
 
-If no exact context percentage is available from the local session log, the UI, or the user, use practical risk signals:
+If no exact context percentage is available from the local session log, the UI, or the user, do not show the risk banner. Use concise prose if practical risk signals matter:
 
 1. The thread has accumulated many file reads, tool outputs, build or validation logs, debugging steps, or implementation phases.
 2. The next step would be hard to review or roll back if recent conversation turns were lost.
@@ -121,13 +153,13 @@ If no exact context percentage is available from the local session log, the UI, 
 
 If a computed context percentage, visible context percentage, or token meter is available:
 
-1. Use the 75 to 85 percent range as the warning band because it leaves room to capture durable state before hard compaction.
-2. Do not show the risk banner below 75 percent unless no meter is visible and practical risk signals are strong.
-3. At or above 85 percent, warn before any non-trivial implementation, validation, generated-output, media, or docs phase and recommend a new thread before continuing.
+1. Use 75 percent as the minimum warning percentage because it leaves room to capture durable state before hard compaction.
+2. Do not show the risk banner below 75 percent.
+3. At or above 85 percent, the recommendation to open a new thread should be stronger, but the banner is still shown only once per session.
 4. Do not wait for a known failure point such as a prior observed percentage unless the runtime provides a documented hard limit.
 5. Do not count future prompts, future tasks, or work the user says will happen after closing the current thread when estimating current-thread token risk.
 
-Before starting that phase, show this fenced text block:
+When showing the risk warning, show this fenced text block:
 
 ```text
 ############################################################
@@ -167,9 +199,9 @@ Constraints:
 2. Re-read current files before editing.
 ```
 
-Then stop before implementation unless the user asks only for a short answer or a durable handoff. If compaction risk has already been identified, do not skip the ASCII banner for a docs-only update; the banner is the required visual indicator.
+After the warning, the user decides whether to continue implementation in the same session or move to a new thread. Do not show the risk banner again in the same session; use concise prose if more risk discussion is needed.
 
-If this warning is shown during a turn, repeat the same fenced ASCII banner and the suggested continuation prompt in the final answer and in any prompt summary or handoff.
+If this warning is shown during a turn, repeat the same fenced ASCII banner and the suggested continuation prompt in the final answer and in any prompt response summary or handoff.
 
 ## Durable Handoff
 
@@ -214,12 +246,14 @@ In the new thread or fresh session:
 
 ## Common Mistakes
 
-1. Continuing implementation after detecting actual compaction.
+1. Treating a warning as an automatic stop instead of letting the user decide whether implementation continues.
 2. Treating a summary as equivalent to the full thread.
 3. Trusting remembered file contents instead of re-reading files.
 4. Losing recent user corrections or constraints.
-5. Starting a long refactor after warning about context risk.
-6. Giving a handoff without exact files, commands, validation status, and constraints.
-7. Saying that the thread is long or risky without displaying the required ASCII warning banner.
-8. Showing a compaction or compaction-risk warning only in an interim update and omitting it from the final answer.
-9. Treating speculative future prompts or future-thread work as current-thread compaction risk.
+5. Showing `COMPACTION RISK WARNING` below the minimum warning percentage.
+6. Showing either warning banner more than once in the same session.
+7. Giving a continuation prompt after actual compaction, when context truth may already be corrupted.
+8. Giving a handoff without exact files, commands, validation status, and constraints.
+9. Showing a compaction-risk warning only in an interim update and omitting the banner and continuation prompt from the final answer or prompt response summary.
+10. Showing a compaction-occurred warning only in an interim update and omitting the banner from the final answer or prompt response summary.
+11. Treating speculative future prompts or future-thread work as current-thread compaction risk.

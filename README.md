@@ -4,7 +4,7 @@ Public Codex utilities and skills.
 
 ## Compaction Cat
 
-`compaction-cat` is a Codex skill that helps prevent unsafe implementation work after context compaction or near the end of a long, context-heavy thread. It uses cat-themed ASCII warning banners to make compaction warnings hard to miss.
+`compaction-cat` is a Codex skill that warns when a Codex session has compacted or is near the end of the context window. It uses cat-themed ASCII warning banners to make compaction warnings hard to miss. The skill warns; the user decides whether implementation continues in the same session.
 
 The following screenshot shows a warning after compaction occurred, in this case at about 90% context window used.
 <img width="1107" height="1523" alt="compacted_85_to_11perc" src="https://github.com/user-attachments/assets/7cd12deb-873f-4224-866d-4fbfd4feb2e7" />
@@ -15,12 +15,12 @@ Use it when:
 - A long thread is about to enter a risky implementation phase.
 - The next step is a multi-file refactor, migration, generated-output rewrite, media workflow change, validation pass, docs update, or long debug session.
 - The thread has repeated user corrections or thread-only decisions that should be captured before more stateful work.
-- A computed or visible context meter is in the 75 to 85 percent warning range, or no meter is available but practical risk signals show the thread is already context-heavy.
+- A computed or visible context meter is at or above the minimum warning percentage, currently 75 percent.
 - You want Codex to produce a durable handoff before moving to a new thread or fresh session.
 
 Compaction-risk estimates should use only work the user has actually requested in existing prompts. Do not count speculative future prompts, future same-thread tasks, or future work the user says will happen after closing the current thread.
 
-When available, Compaction Cat should calculate the current thread context-window percentage from the local Codex session log before relying on practical risk signals. This is local file inspection only and does not require a query to the OpenAI or Codex model server. Use `CODEX_THREAD_ID`, find the matching JSONL session log under `%USERPROFILE%\.codex\sessions` or through `session_index.jsonl`, read the latest `event_msg` entry where `payload.type == "token_count"`, and calculate `(payload.info.last_token_usage.total_tokens / payload.info.model_context_window) * 100`. Show the risk warning at 75 percent or higher. Do not use `rate_limits.primary.used_percent` or cumulative `total_token_usage.total_tokens` as context-window occupancy.
+When available, Compaction Cat should calculate the current thread context-window percentage from the local Codex session log before relying on practical risk signals. This is local file inspection only and does not require a query to the OpenAI or Codex model server. Use `CODEX_THREAD_ID`, find the matching JSONL session log under `%USERPROFILE%\.codex\sessions` or through `session_index.jsonl`, read the latest `event_msg` entry where `payload.type == "token_count"`, and calculate `(payload.info.last_token_usage.total_tokens / payload.info.model_context_window) * 100`. A value of 75 percent or higher satisfies the risk threshold, subject to actual-compaction priority and the once-per-session warning limit. Do not use `rate_limits.primary.used_percent` or cumulative `total_token_usage.total_tokens` as context-window occupancy.
 
 The skill is located at:
 
@@ -75,10 +75,10 @@ When $compaction-cat is available and used, confirm it visibly in the same respo
 If $compaction-cat is unavailable, warn the user explicitly in the same response before using the local fallback workflow.
 ```
 
-Compaction Cat should sit above local workflow, build, validation, domain, and implementation instructions for any compaction or compaction-risk decision. Keep a small local fallback in `AGENTS.md` or project docs so the project remains safe when the skill is not installed. At minimum, the project instructions should say Codex must confirm when `$compaction-cat` is loaded and warn the user when `$compaction-cat` is unavailable. After actual compaction, Codex must show the `COMPACTION HAS OCCURRED` banner, stop implementation work, and ask the user to open a new thread or fresh session. If Codex says or concludes that a thread is long enough or stateful enough to create compaction risk, Codex must display the `COMPACTION RISK WARNING` ASCII banner; prose alone is not enough.
+Compaction Cat should sit above local workflow, build, validation, domain, and implementation instructions for any compaction or compaction-risk decision. Keep a small local fallback in `AGENTS.md` or project docs so the project remains safe when the skill is not installed. At minimum, the project instructions should say Codex must confirm when `$compaction-cat` is loaded and warn the user when `$compaction-cat` is unavailable. After actual compaction, Codex must show the `COMPACTION HAS OCCURRED` banner once for the session and recommend opening a new thread or fresh session. If actual compaction is not detected and the context-window percentage reaches the minimum warning percentage, currently 75 percent, Codex must display the `COMPACTION RISK WARNING` ASCII banner once for the session; prose alone is not enough.
 
 ## What It Does
-When compaction risk is high, the skill tells Codex to warn before starting risky work and provide a concrete handoff that includes files to read, current state, commands run, validation status, constraints, and next steps. The ASCII warning banner is mandatory once risk has been identified, including before docs-only edits; prose alone is not enough. If a compaction-risk warning banner appears in an interim update, the final answer and any prompt summary or handoff must repeat the same fenced ASCII warning and suggested continuation prompt so they remain visible after progress details collapse. The warning is based on practical risk signals from work the user has actually requested in existing prompts. Do not count speculative future prompts, future same-thread tasks, or future work the user says will happen after closing the current thread. If a computed context percentage, visible context percentage, or token meter is available, use the 75 to 85 percent range as the warning band because it leaves room to capture durable state before hard compaction. Do not show the risk banner below 75 percent unless no meter is visible and practical risk signals are strong. At or above 85 percent, warn before any non-trivial implementation, validation, generated-output, media, or docs phase and recommend a new thread before continuing.
+When compaction risk is high, the skill tells Codex to warn and provide a concrete suggested continuation prompt that includes files to read, current state, commands run, validation status, constraints, and next steps. The user decides whether implementation continues in the same session. The ASCII risk warning is mandatory once the current session context-window percentage reaches the minimum warning percentage, currently 75 percent, and is shown at most once per session. If a compaction-risk warning banner appears in an interim update, the final answer and any prompt response summary or handoff must repeat the same fenced ASCII warning and suggested continuation prompt so they remain visible after progress details collapse. That same-turn repetition is part of the same warning event. Do not count speculative future prompts, future same-thread tasks, or future work the user says will happen after closing the current thread. Do not show the risk banner below 75 percent.
 
 ```text
 ############################################################
@@ -94,7 +94,7 @@ When compaction risk is high, the skill tells Codex to warn before starting risk
 ############################################################
 ```
 
-When actual compaction is detected, the skill tells Codex to pause implementation work, recommend a new thread or fresh session, and resume from durable project state unless the user explicitly decides otherwise. If this warning appears in an interim update, the final answer must repeat the same fenced ASCII warning.
+When actual compaction is detected, the skill tells Codex to warn that context truth may be corrupted and recommend a new thread or fresh session unless the user explicitly decides otherwise. The `COMPACTION HAS OCCURRED` banner is shown at most once per session. If this warning appears in an interim update, the final answer and any prompt response summary must repeat the same fenced ASCII warning. That same-turn repetition is part of the same warning event. Do not include a continuation prompt after actual compaction because summarized context may make that prompt inaccurate.
 
 ```text
 ############################################################
