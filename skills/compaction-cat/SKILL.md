@@ -24,8 +24,10 @@ For actual compaction, keep the `COMPACTION HAS OCCURRED` banner first, then inc
 5. In the new thread, re-read the relevant files and instructions before continuing work.
 6. Keep warnings and handoffs concrete. Avoid generic advice that leaves the next thread guessing.
 7. Treat compaction risk as practical, but use the visible 75 to 85 percent context range as the normal warning band when a context percentage or token meter is available. Do not show the risk banner below 75 percent unless no meter is visible and practical risk signals are strong. At or above 85 percent, warn before non-trivial implementation, validation, generated-output, media, or docs work.
-8. If the assistant says or concludes that the thread is carrying enough important state to make compaction risky, the ASCII warning banner is mandatory before any further implementation, validation, generated-output, or docs edit. Do not replace the banner with prose.
-9. If a compaction or compaction-risk warning banner is shown in an interim update, repeat the same fenced ASCII banner in the final answer so it remains visible after progress details collapse.
+8. Calculate potential token usage from work the user has actually requested in existing prompts. Do not count speculative future work, including work the user says they may request later in the same thread or after closing the thread, as a current-thread compaction risk signal.
+9. If the user says they plan to start a large task in a future prompt or a new thread, provide a normal concise handoff or startup prompt if useful. Do not show the compaction-risk banner for that future task unless the current response itself is large, stateful, or near the 75 to 85 percent warning range.
+10. If the assistant says or concludes that the thread is carrying enough important state to make compaction risky, the ASCII warning banner is mandatory before any further implementation, validation, generated-output, or docs edit. Do not replace the banner with prose.
+11. If a compaction or compaction-risk warning banner is shown in an interim update, repeat the same fenced ASCII banner in the final answer so it remains visible after progress details collapse.
 
 ## Compaction Detected
 
@@ -63,7 +65,7 @@ If this warning is shown during a turn, repeat the same fenced ASCII banner in t
 
 ## Compaction Risk
 
-Show a risk warning before starting a new phase when both are true:
+Show a risk warning before starting a new phase when both are true. Base the decision on work the user has actually requested in existing prompts, not speculative future prompts or tasks the user says will happen in a later thread:
 
 1. The thread or session is already long, context-heavy, or the assistant has already said a new thread or fresh session would be prudent.
 2. The next step is broad, stateful, or hard to review if compaction occurs mid-work.
@@ -94,6 +96,7 @@ If a context percentage or token meter is visible:
 2. Do not show the risk banner below 75 percent unless no meter is visible and practical risk signals are strong.
 3. At or above 85 percent, warn before any non-trivial implementation, validation, generated-output, media, or docs phase and recommend a new thread before continuing.
 4. Do not wait for a known failure point such as a prior observed percentage unless the runtime provides a documented hard limit.
+5. Do not count future prompts, future tasks, or work the user says will happen after closing the current thread when estimating current-thread token risk.
 
 Before starting that phase, show this fenced text block:
 
@@ -190,3 +193,4 @@ In the new thread or fresh session:
 6. Giving a handoff without exact files, commands, validation status, and constraints.
 7. Saying that the thread is long or risky without displaying the required ASCII warning banner.
 8. Showing a compaction or compaction-risk warning only in an interim update and omitting it from the final answer.
+9. Treating speculative future prompts or future-thread work as current-thread compaction risk.
