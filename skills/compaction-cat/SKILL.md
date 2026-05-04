@@ -27,12 +27,14 @@ For actual compaction, keep the `COMPACTION HAS OCCURRED` banner first, then inc
 8. In the new thread, re-read the relevant files and instructions before continuing work.
 9. Keep warnings and handoffs concrete. Avoid generic advice that leaves the next thread guessing.
 10. When the local Codex session log is available, calculate the current thread context-window usage locally from the latest `token_count` event before relying on visible UI meters or practical risk signals. Do not query the OpenAI or Codex model server for this calculation.
-11. Routine context-window checks are silent. Do not announce that you are looking up the thread id, session log, token-count event, or current percentage unless the user explicitly asks or a warning must be shown.
-12. Do not show the risk banner below 75 percent. Practical risk signals may justify concise advice, but they do not override the minimum percentage threshold.
-13. Calculate potential token usage from work the user has actually requested in existing prompts. Do not count speculative future work, including work the user says they may request later in the same thread or after closing the thread, as a current-thread compaction risk signal.
-14. If the user says they plan to start a large task in a future prompt or a new thread, provide a normal concise handoff or startup prompt if useful. Do not show the compaction-risk banner for that future task unless the current session context-window usage is at or above the minimum warning percentage.
-15. If a `COMPACTION RISK WARNING` banner is shown in an interim update, repeat the same fenced ASCII banner and suggested continuation prompt in the final answer and in any prompt response summary for that turn.
-16. If a `COMPACTION HAS OCCURRED` banner is shown in an interim update, repeat the same fenced ASCII banner in the final answer and in any prompt response summary for that turn, but do not include a continuation prompt.
+11. Treat each new user prompt as a silent context-window checkpoint. At the start of each new assistant turn, before any substantive work, read the latest local `token_count` event when available and calculate the current context-window percentage.
+12. If that prompt-boundary checkpoint computes context-window usage at 75 percent or higher, and `COMPACTION RISK WARNING` has not already been shown in the current session, show the risk banner immediately before doing any other work.
+13. Routine context-window checks are silent. Do not announce that you are looking up the thread id, session log, token-count event, or current percentage unless the user explicitly asks or a warning must be shown.
+14. Do not show the risk banner below 75 percent. Practical risk signals may justify concise advice, but they do not override the minimum percentage threshold.
+15. Calculate potential token usage from work the user has actually requested in existing prompts. Do not count speculative future work, including work the user says they may request later in the same thread or after closing the thread, as a current-thread compaction risk signal.
+16. If the user says they plan to start a large task in a future prompt or a new thread, provide a normal concise handoff or startup prompt if useful. Do not show the compaction-risk banner for that future task unless the current session context-window usage is at or above the minimum warning percentage.
+17. If a `COMPACTION RISK WARNING` banner is shown in an interim update, repeat the same fenced ASCII banner and suggested continuation prompt in the final answer and in any prompt response summary for that turn.
+18. If a `COMPACTION HAS OCCURRED` banner is shown in an interim update, repeat the same fenced ASCII banner in the final answer and in any prompt response summary for that turn, but do not include a continuation prompt.
 
 ## Per-Session Warning Limits
 
@@ -57,6 +59,7 @@ If a warning is shown during a turn, preserve it in the response summary for tha
 
 Context-window measurement should not add routine chatter to the thread:
 
+0. Treat each new user prompt as a silent checkpoint before any substantive assistant work.
 1. Do not say that the local thread id is visible.
 2. Do not say that you are looking up the matching session log.
 3. Do not say that you are reading or checking the `token_count` event.
