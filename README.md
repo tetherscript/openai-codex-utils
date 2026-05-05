@@ -6,8 +6,39 @@ Public Codex utilities and skills.
 
 `compaction-cat` is a Codex skill that warns when a Codex session has compacted or is near the end of the context window. It uses cat-themed ASCII warning banners to make compaction warnings hard to miss. The skill warns; the user decides whether implementation continues in the same session.
 
-The following screenshot shows a warning after compaction occurred, in this case at about 90% context window used.
-<img width="1107" height="1523" alt="compacted_85_to_11perc" src="https://github.com/user-attachments/assets/7cd12deb-873f-4224-866d-4fbfd4feb2e7" />
+## What It Does
+When compaction risk is high, the skill tells Codex to warn and provide a concrete suggested continuation prompt that includes files to read, current state, commands run, validation status, constraints, and next steps. The user decides whether implementation continues in the same session. The ASCII risk warning is mandatory once the current session context-window percentage reaches the minimum warning percentage, currently 75 percent, and is shown at most once per session. If a compaction-risk warning banner appears in an interim update, the final answer and any prompt response summary or handoff must repeat the same fenced ASCII warning and suggested continuation prompt so they remain visible after progress details collapse. That same-turn repetition is part of the same warning event. Do not count speculative future prompts, future same-thread tasks, or future work the user says will happen after closing the current thread. Do not show the risk banner below 75 percent.
+```text
+############################################################
+#                                                          #
+#              COMPACTION RISK WARNING                     #
+#                                                          #
+#   NEXT STEP IS LARGE ENOUGH TO RISK MID-WORK COMPACTION. #
+#                                                          #
+#        /\_/\       RECOMMENDED: NEW THREAD NOW           #
+#       ( -.- )      I CAN CAPTURE STATE FIRST             #
+#        > ^ <                                             #
+#                                                          #
+############################################################
+You are at about 79.57% context-window usage, so a new thread is the right call before target-selection design and implementation.
+Here's your handoff prompt....
+```
+
+And eventually when actual compaction is detected.
+```
+############################################################
+#                                                          #
+#              COMPACTION HAS OCCURRED                     #
+#                                                          #
+#   I AM CONTINUING FROM A SUMMARY, NOT FULL THREAD LOG.   #
+#                                                          #
+#        /\_/\                                             #
+#       ( o.o )     CONTEXT PURITY WARNING                 #
+#        > ^ <                                             #
+#                                                          #
+############################################################
+Context truth may be corrupted because I am continuing from a summary rather than the full thread log. I recommend opening a new thread before more implementation work; for this docs-only update, I will re-read the current files first and keep the edits narrowly scoped.
+```
 
 Use it when:
 
@@ -78,40 +109,6 @@ If $compaction-cat is unavailable, warn the user explicitly in the same response
 ```
 
 Compaction Cat should sit above local workflow, build, validation, domain, and implementation instructions for any compaction or compaction-risk decision. Keep a small local fallback in `AGENTS.md` or project docs so the project remains safe when the skill is not installed. At minimum, the project instructions should say Codex must confirm when `$compaction-cat` is loaded and warn the user when `$compaction-cat` is unavailable. After actual compaction, Codex must show the `COMPACTION HAS OCCURRED` banner once for the session and recommend opening a new thread or fresh session. If actual compaction is not detected and the context-window percentage reaches the minimum warning percentage, currently 75 percent, Codex must display the `COMPACTION RISK WARNING` ASCII banner once for the session; prose alone is not enough.
-
-## What It Does
-When compaction risk is high, the skill tells Codex to warn and provide a concrete suggested continuation prompt that includes files to read, current state, commands run, validation status, constraints, and next steps. The user decides whether implementation continues in the same session. The ASCII risk warning is mandatory once the current session context-window percentage reaches the minimum warning percentage, currently 75 percent, and is shown at most once per session. If a compaction-risk warning banner appears in an interim update, the final answer and any prompt response summary or handoff must repeat the same fenced ASCII warning and suggested continuation prompt so they remain visible after progress details collapse. That same-turn repetition is part of the same warning event. Do not count speculative future prompts, future same-thread tasks, or future work the user says will happen after closing the current thread. Do not show the risk banner below 75 percent.
-```text
-############################################################
-#                                                          #
-#              COMPACTION RISK WARNING                     #
-#                                                          #
-#   NEXT STEP IS LARGE ENOUGH TO RISK MID-WORK COMPACTION. #
-#                                                          #
-#        /\_/\       RECOMMENDED: NEW THREAD NOW           #
-#       ( -.- )      I CAN CAPTURE STATE FIRST             #
-#        > ^ <                                             #
-#                                                          #
-############################################################
-You are at about 79.57% context-window usage, so a new thread is the right call before target-selection design and implementation.
-Here's your handoff prompt....
-```
-
-And eventually when actual compaction is detected.
-```
-############################################################
-#                                                          #
-#              COMPACTION HAS OCCURRED                     #
-#                                                          #
-#   I AM CONTINUING FROM A SUMMARY, NOT FULL THREAD LOG.   #
-#                                                          #
-#        /\_/\                                             #
-#       ( o.o )     CONTEXT PURITY WARNING                 #
-#        > ^ <                                             #
-#                                                          #
-############################################################
-Context truth may be corrupted because I am continuing from a summary rather than the full thread log. I recommend opening a new thread before more implementation work; for this docs-only update, I will re-read the current files first and keep the edits narrowly scoped.
-```
 
 ## License
 
