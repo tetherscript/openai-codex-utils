@@ -81,7 +81,6 @@ Compaction Cat should sit above local workflow, build, validation, domain, and i
 
 ## What It Does
 When compaction risk is high, the skill tells Codex to warn and provide a concrete suggested continuation prompt that includes files to read, current state, commands run, validation status, constraints, and next steps. The user decides whether implementation continues in the same session. The ASCII risk warning is mandatory once the current session context-window percentage reaches the minimum warning percentage, currently 75 percent, and is shown at most once per session. If a compaction-risk warning banner appears in an interim update, the final answer and any prompt response summary or handoff must repeat the same fenced ASCII warning and suggested continuation prompt so they remain visible after progress details collapse. That same-turn repetition is part of the same warning event. Do not count speculative future prompts, future same-thread tasks, or future work the user says will happen after closing the current thread. Do not show the risk banner below 75 percent.
-
 ```text
 ############################################################
 #                                                          #
@@ -94,11 +93,12 @@ When compaction risk is high, the skill tells Codex to warn and provide a concre
 #        > ^ <                                             #
 #                                                          #
 ############################################################
+You are at about 79.57% context-window usage, so a new thread is the right call before target-selection design and implementation.
+Here's your handoff prompt....
 ```
 
-When actual compaction is detected, the skill tells Codex to warn that context truth may be corrupted and recommend a new thread or fresh session unless the user explicitly decides otherwise. The `COMPACTION HAS OCCURRED` banner is shown at most once per session. If this warning appears in an interim update, the final answer and any prompt response summary must repeat the same fenced ASCII warning. That same-turn repetition is part of the same warning event. Do not include a continuation prompt after actual compaction because summarized context may make that prompt inaccurate.
-
-```text
+And eventually when actual compaction is detected.
+```
 ############################################################
 #                                                          #
 #              COMPACTION HAS OCCURRED                     #
@@ -110,6 +110,7 @@ When actual compaction is detected, the skill tells Codex to warn that context t
 #        > ^ <                                             #
 #                                                          #
 ############################################################
+Context truth may be corrupted because I am continuing from a summary rather than the full thread log. I recommend opening a new thread before more implementation work; for this docs-only update, I will re-read the current files first and keep the edits narrowly scoped.
 ```
 
 ## License
