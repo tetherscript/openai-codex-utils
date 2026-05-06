@@ -36,6 +36,17 @@ For actual compaction, keep the `COMPACTION HAS OCCURRED` banner first, then inc
 17. If a `COMPACTION RISK WARNING` banner is shown in an interim update, repeat the same fenced ASCII banner and suggested continuation prompt in the final answer and in any prompt response summary for that turn.
 18. If a `COMPACTION HAS OCCURRED` banner is shown in an interim update, repeat the same fenced ASCII banner in the final answer and in any prompt response summary for that turn, but do not include a continuation prompt.
 
+## Handoff Prompts Are Not Compaction
+
+Treat user-authored handoff, resume, continuation, current-state, or startup prompts as ordinary user input unless the active system context separately says the session itself was compacted or the assistant can only see a compressed conversation summary. A user can paste a detailed handoff into a fresh, uncompacted thread; that handoff may be useful context, but it is not evidence that `COMPACTION HAS OCCURRED`.
+
+When a user-authored handoff is present without actual compaction:
+
+1. Use durable files and current workspace state as source of truth.
+2. Re-read relevant docs and source files before implementation.
+3. Do not show the `COMPACTION HAS OCCURRED` banner.
+4. Evaluate normal compaction risk separately, and show `COMPACTION RISK WARNING` only when the current context-window usage is known to be at least 75 percent.
+
 ## Per-Session Warning Limits
 
 Each warning type is shown at most once per Codex session:
@@ -71,9 +82,17 @@ Context-window measurement should not add routine chatter to the thread:
 
 Treat any of these as actual compaction:
 
-1. The active context says the conversation was compacted, summarized, resumed, or continued from a summary.
-2. The assistant sees only a summary of prior work instead of the full prior thread.
-3. The assistant cannot inspect the latest detailed conversation turns that led to the current state.
+1. The active system or developer context says the conversation was compacted, summarized, resumed, or continued from a summary.
+2. The assistant sees only a system-provided summary of prior work instead of the full prior thread.
+3. The assistant cannot inspect the latest detailed conversation turns that led to the current state because they were replaced by compressed context.
+
+Do not treat these as actual compaction by themselves:
+
+1. A user-authored continuation prompt.
+2. A pasted handoff.
+3. A resume checklist.
+4. A current-state summary written by the user.
+5. A request to continue work from a named commit, dirty worktree, active plan, or validation checkpoint.
 
 When actual compaction is detected and the `COMPACTION HAS OCCURRED` banner has not already been shown in the current session, begin the next assistant message with this fenced text block:
 
@@ -273,3 +292,4 @@ In the new thread or fresh session:
 10. Showing a compaction-occurred warning only in an interim update and omitting the banner from the final answer or prompt response summary.
 11. Treating speculative future prompts or future-thread work as current-thread compaction risk.
 12. Announcing routine context-window lookup details when no warning is needed and the user did not ask for the percentage.
+13. Treating a user-authored handoff or continuation prompt as proof that the current assistant session has compacted.
